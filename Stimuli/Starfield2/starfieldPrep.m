@@ -1,16 +1,28 @@
-% Starfield 2 is spherical.
+% Starfield 2 is nominally a cuboid, but is effectively infinite in size, because we
+% allow space to "roll around" from one edge to the other 
+% (copying dots from inaccessible areas into accessible areas).
 % Fly does not move. Background moves in ONE of the 6 available motions.
 % Combined background movements may work but have not been tested yet.
+% Combined translations should be fine.
+
+% TODO = we may consider implementing an arbitrary line of sight.
+% But the problems are: 
+% 1. the frustum culling below won't work anymore (frustum has to move to 
+% be in line with the line of sight; the culling code below assumes we are looking down the
+% (negative) z-axis)
+% 2. and in that case, the monitor won't be orthogonal to the line of sight
+% anymore, and hence not parallel to the near or far planes. So then we
+% need Generalized Perspective Projection. 
+% 3. And we need to rotate things around the arbitrary axis of the line of
+% sight (as well as adjusting translations)!
 
 function output = starfieldPrep(Parameters, ScreenData, StimSettings, NumSubframes)
-%
-% Takes input from the user inteface and makes pre computations.
-%
 
 %--------------------------------------------------------------------------
 % FlyFly v3.1
 %
 % Jonas Henriksson, 2010                                   info@flyfly.se
+% Richard Leibbrandt, 2018
 %--------------------------------------------------------------------------
 
 if nargin<4
@@ -19,15 +31,14 @@ end
 
 global GL;
 
-DENSITY_CONVERSION = 1e-4;
+DEBUG_SPACE = false;
 
-starfieldUserSettings; %loads user settings from file. loaded files in CAPS
+DENSITY_CONVERSION = 1e-4;
 
 [~, numRuns] = size(Parameters);
 
-P.dotSize     = Parameters(1,1) * ones(1,length(Parameters(1,:)));    % Note we take the first trial's dot size for everything
-P.density     = DENSITY_CONVERSION*Parameters(2,1) * ones(1,length(Parameters(2,:)));    % Take the first trial's density for everything
-
+P.dotSize     = Parameters(1,:)/NumSubframes;
+P.density     = DENSITY_CONVERSION*Parameters(2,:)/NumSubframes;
 P.rl          = Parameters(3,:)/NumSubframes;   % sideslip
 P.ud          = Parameters(4,:)/NumSubframes;   % lift
 P.fb          = Parameters(5,:)/NumSubframes;   % thrust
@@ -38,55 +49,47 @@ P.background_noise = Parameters(9,:)*NumSubframes;
 P.retain      = Parameters(10,:);
 P.t           = Parameters(11,:)*NumSubframes;
 
+
+
+% CORRECTION OF DIRECTIONS
+P.rl = -P.rl;
+P.fb = -P.fb;
+P.roll = -P.roll;
+% ud, pitch and yaw are "correct"
+
+% PROJECTION MATRIX PARAMETERS
 % z-clipping planes
 zFar = 200;
-%zNear = 3;
-zNear = ScreenData.flyDistance;
-
+zNear = 6;
+%zNear = ScreenData.flyDistance;
 % Field of view (y)
 fovy = 2*atand(0.5*ScreenData.monitorHeight/ScreenData.flyDistance);
 % Aspect ratio
 ar = ScreenData.rect(3) / ScreenData.rect(4);
 
-
-
 P.monHeight    = ScreenData.monitorHeight;
-
 P.monWidth = P.monHeight * ar;
 P.viewDistance = zFar;
-
-box_x = P.monWidth*P.viewDistance/ScreenData.flyDistance;
-box_y = P.monHeight*P.viewDistance/ScreenData.flyDistance;
-box_z = 2*P.viewDistance;
-
-%P.dotSize      = min(max(1, P.dotSize),63);    %min size of dots in drawDots = 1, max = 63
-
 ifi = ScreenData.ifi;
-
 pxPerCm = ScreenData.rect(4) ./ P.monHeight;
 
-%[center(1), center(2)] = RectCenter(ScreenData.rect);
-center = ScreenData.flyPos(1:2);
-
-hPx = ScreenData.flyPos(4)-center(2); % px offset from center
-h   = hPx/pxPerCm;
-
-cameraLookAt = [(ScreenData.flyPos(3:4)-ScreenData.flyPos(1:2))./pxPerCm ScreenData.flyDistance];
-tiltAngleX = atand(((ScreenData.flyPos(3)-ScreenData.flyPos(1))./pxPerCm)/ScreenData.flyDistance);
-tiltAngleY = atand(((ScreenData.flyPos(4)-ScreenData.flyPos(2))./pxPerCm)/ScreenData.flyDistance);
-
-center(2) = center(2) + h*pxPerCm;
-
-%gamma1 = (atan(h/ScreenData.flyDistance))/180*pi;
-%gamma2 = (pi/2 - gamma1);
-
-box_x = P.monWidth*P.viewDistance/ScreenData.flyDistance;
-box_y = P.monHeight*P.viewDistance/ScreenData.flyDistance;
-box_z = 2*P.viewDistance;
+% INITIAL SPACE - just needs to be reasonably large, as it will essentially
+% be infinite - see below
+box_x = 2*P.viewDistance;
+box_y = box_x;
+box_z = box_x;
 
 P.viewDistX = box_x/2;
 P.viewDistY = box_y/2;
 P.viewDistZ = box_z/2;
+
+maxSize = (ScreenData.flyDistance/zNear)*pxPerCm*P.dotSize;
+if any(maxSize > 255)
+    safe_size = (255*zNear)/(ScreenData.flyDistance*pxPerCm);
+    too_big_msg = sprintf('Some dots may be too large to display with your setup, with the specified dot size. Use a dot size no larger than %1.2f to avoid this.\n', safe_size);
+    msgbox(too_big_msg, 'Warning', 'warn');
+end
+
 
 seconds = P.t*ifi;  % estimated no of seconds to perform the rotation
 full_roll = deg2rad(P.roll.*seconds);
@@ -96,78 +99,43 @@ full_rl = -P.rl.*seconds;
 full_ud = P.ud.*seconds;
 full_fb = -P.fb.*seconds;
 
-% THE FOLLOWING DOESN'T WORK YET, SO FALLING BACK ON THE OLD WAY OF
-% AVOIDING MOVING OUT OF VISUAL SPACE - THIS IS STILL TO DO!
-%{
-% CALCULATE THE SIZE OF THE STARFIELD SPACE
-% We need to calculate the size of the required underlying visual space, so that we don't
-% "go over the edge" and run out of stars, potentially causing inconsistencies 
-% in visual density.
-
-% boxes stores the maximum extent of the visible space in each of the X Y Z dimensions, 
-% given how far the origin has moved over the course of several trials.
-% (the space is retained from one trial to the next when retain is true)
-boxes = cell(1,numRuns);
-% we only store something in boxes whenever the star seed is reinitialized (i.e. k==1, or retain is false)
-% firstIndex is the index where this occurs each time
-firstIndex = 1; 
-
-% we keep track of where the origin moves to, as well as the furthest
-% extent that the origin has moved so far in any of the 3 axis directions.
-% the value of boxes will be each of these X Y Z displacements, with the
-% distance to the far plane (zFar) added to each, multiplied by 2 to
-% produce a symmetrical box for use by starSeed2.
-ocoords = [0 0 0];  % coordinates of the origin
-mins = [0 0 0];     % furthest extent of the origin into the negative x,y,z axes
-maxes = [0 0 0];    % furthest extent of the origin into the positive x,y,z axes
-
-% calculate boxes
-for k =1:numRuns
-    if P.yaw(k) ~= 0
-        [ocoords(1), ocoords(3)] = rotateXY(ocoords(1), ocoords(3), full_yaw(k));
-    elseif P.pitch(k) ~= 0
-        [ocoords(2), ocoords(3)] = rotateXY(ocoords(2), ocoords(3), full_pitch(k));
-    elseif P.roll(k) ~= 0
-        [ocoords(1), ocoords(2)] = rotateXY(ocoords(1), ocoords(2), full_roll(k));
-    else
-        ocoords = ocoords + [full_rl(k) full_ud(k) full_fb(k)];
-    end
-    mins = min([mins; ocoords]);
-    maxes = max([maxes; ocoords]);
-    if k==numRuns || ~P.retain(k)
-        boxes{firstIndex} = 2*(max([abs(mins); abs(maxes)]) + zFar);
-        ocoords = [0 0 0];
-        mins = [0 0 0];
-        maxes = [0 0 0];
-        firstIndex = k + 1;
-    end
-end;
-%}
-
+% OPENGL STUFF - required to obtain  ModelView and Projection matrices, and viewport 
+% Note we don't use OpenGL functions for transformations, projections or
+% rendering (only the matrices).
 Screen('BeginOpenGL', ScreenData.wPtr);
 
 glViewport(0, 0, ScreenData.rect(3), ScreenData.rect(4));
 
 glDisable(GL.LIGHTING);
 
-glEnable(GL.BLEND);
-glBlendFunc(GL.SRC_ALPHA, GL.ONE_MINUS_SRC_ALPHA);
+%glEnable(GL.BLEND);
+%glBlendFunc(GL.SRC_ALPHA, GL.ONE_MINUS_SRC_ALPHA);
 
 glMatrixMode(GL.PROJECTION);
 glLoadIdentity;
 
-gluPerspective(fovy, ar, zNear, zFar);
+if isfield(StimSettings(1), 'ortho')
+    disp('USING ORTHO PROJECTION!');
+    imgWidth = 10000;imgHeight=10000;
+    glOrtho(-imgWidth/2, imgWidth/2, -imgHeight/2, imgHeight/2, zNear, zFar);
+else
+    gluPerspective(fovy, ar, zNear, zFar);
+end
+
 %glOrtho(-P.monWidth/2, P.monWidth/2, -P.monHeight/2, P.monHeight/2, zNear, zFar);
+%
 % glRotatef(-tiltAngleX,1,0,0);
 % glRotatef(tiltAngleY,0,1,0);
 
 glMatrixMode(GL.MODELVIEW);
 glLoadIdentity;
+origin = [0, 0, 0];
+%cameraLookAt = [(ScreenData.flyPos(3:4)-ScreenData.flyPos(1:2))./pxPerCm -ScreenData.flyDistance];
+cameraLookAt = [0, 0, -1]; 
+upDir = [0, 1, 0];
+gluLookAt(origin(1),origin(2),origin(3), cameraLookAt(1),cameraLookAt(2),cameraLookAt(3), upDir(1),upDir(2),upDir(3));
 
-gluLookAt(0,0,0, cameraLookAt(1),cameraLookAt(2),cameraLookAt(3), 0,1,0);
-%gluLookAt(0,0,0,  0,0,1,  0,1,0);
-
-% These are used in gluProject (3d -> 2d coordinates)
+% These are used in project3d (3d -> 2d coordinates)
 % Get the projection matrix
 projection = glGetDoublev(GL.PROJECTION_MATRIX);
 projectionMatrix = reshape(projection,4,4);
@@ -177,23 +145,36 @@ modelviewMatrix = reshape(modelview,4,4);
 % Get the viewport
 viewport = glGetIntegerv(GL.VIEWPORT);
 viewport = double(viewport);
-
 MP = projectionMatrix*modelviewMatrix;
 
+Screen('EndOpenGL', ScreenData.wPtr);
+
+% PREPARE THE OUTPUT
 output(numRuns) = struct('xymatrix',[],'color',[],'dotsize',[],'center',[]);
 
-origin_pos = [0 0 0];
+%origin_pos = [0 0 0];
 crash_alert = false;
+
+numDots = -1;
+numshown = zeros(1,numRuns);
 
 for k=1:numRuns     % for each trial
     if (k==1) || ~P.retain(k-1)
-        % THE FOLLOWING 2 LINES RELATE TO THE APPROACH OF CALCULATING THE
-        % STARFIELD VISUAL SPACE SIZE
-        %b = boxes{k};
-        %[x, y, z, sizes] = starSeed2(P.density(1), P.dotSize(1), b(1), b(2), b(3), zFar);
-        [x, y, z, sizes] = starSeed2(P.density(1), P.dotSize(1), box_x, box_y, box_z, zFar);
-    end;
-    
+        if ~DEBUG_SPACE
+            [x, y, z, sizes] = starSeed2(P.density(k), P.dotSize(k), box_x, box_y, box_z, zFar);
+        else
+            % DEBUGGING - CREATE A SPACE WITH A FIXED GRID OF DOTS, INSTEAD OF
+            % RANDOM STARFIELD
+            xmin=-15.5;xmax=15.5;xspace=1;
+            ymin=-12;ymax=-1;yspace=1;
+            zmin=-20;zmax=-20;zspace=5;
+            sz=1;
+           [x, y, z, sizes] = starSeedDebug(xmin, xmax, xspace, ymin, ymax, yspace, zmin, zmax, zspace, sz);
+        end
+        numDots = numel(x);
+    end
+
+    % N = NUMBER OF FRAMES
     N = P.t(k);
     
     output(k).color = cell(1,N);
@@ -209,8 +190,9 @@ for k=1:numRuns     % for each trial
     
     sx = cell(1,N);
     sy = cell(1,N);
-    sz = cell(1,N);
-    %totaldots = zeros(1,N);
+    
+    clipped = zeros(1,N);
+    culled = zeros(1,N);
     for n=1:N   % for each frame
         
         noise = 2*P.background_noise(k)*rand() - P.background_noise(k);
@@ -220,7 +202,7 @@ for k=1:numRuns     % for each trial
         if P.yaw(k) ~= 0
             inc_yaw = (full_yaw(k) - cumulative_yaw)/(N-n+1);
             inc_yaw = inc_yaw + noise*inc_yaw;
-            [x z] = rotateXY(x, z, inc_yaw);
+            [x, z] = rotateXY(x, z, inc_yaw);
             cumulative_yaw = cumulative_yaw + inc_yaw;
         end
         
@@ -228,7 +210,7 @@ for k=1:numRuns     % for each trial
         if P.pitch(k) ~= 0
             inc_pitch = (full_pitch(k) - cumulative_pitch)/(N-n+1);
             inc_pitch = inc_pitch + noise*inc_pitch;
-            [y z] = rotateXY(y, z, inc_pitch);
+            [y, z] = rotateXY(y, z, inc_pitch);
             cumulative_pitch = cumulative_pitch + inc_pitch;
         end
         
@@ -236,7 +218,7 @@ for k=1:numRuns     % for each trial
         if P.roll(k) ~= 0
             inc_roll = (full_roll(k) - cumulative_roll)/(N-n+1);
             inc_roll = inc_roll + noise*inc_roll;
-            [x y] = rotateXY(x, y, inc_roll);
+            [x, y] = rotateXY(x, y, inc_roll);
             cumulative_roll = cumulative_roll + inc_roll;
         end
         
@@ -262,41 +244,49 @@ for k=1:numRuns     % for each trial
             z = z + inc_fb;
         end;
         
-        % Move stray objects back - AVOIDS MOVING OUT OF
-        % THE VISUAL SPACE
-        
+        % TRICK TO MAKE THE SPACE INFINITE!
+        % Effectively, scrolling the space around when we "go over"
         x(abs(x)> P.viewDistX) = -(x(abs(x)> P.viewDistX));
         y(abs(y)> P.viewDistY) = -(y(abs(y)> P.viewDistY));
         z(abs(z)> P.viewDistZ) = -(z(abs(z)> P.viewDistZ));
-        
-              
+                     
         % CULLING
         % Frustum culling, [fx; fy; fz] are all the points that are inside the frustum
         % http://www.lighthouse3d.com/tutorials/view-frustum-culling/radar-approach-testing-points-ii/
-        h = z*tand(fovy/2);
+        % Note: this is essentially culling in eye coordinates
+        % This code will need to be modified if we use a general frustum
+        % ASSUME: we are looking down the negative z axis
+        h = abs(z*tand(fovy/2));
         w = h*ar;
         
-        indices = and(z>zNear,z<zFar);
+        indices = and(z<-zNear,z>-zFar);
         indices = and(indices,and(y>-h,y<h));
         indices = and(indices,and(x>-w,x<w));
-        
+ 
+        % Switch to fx, fy, fz at this point instead of x, y, z
+        % This is because we don't want to cull the actual dots, or
+        % eventually we'll have none left!
         fx = x(indices);
         fy = y(indices);
         fz = z(indices);
         fs = sizes(indices);
-      
-        %fx=x;fy=y;fz=z;fs=sizes;
+        
+        culled(n) = numel(x)-numel(fx);
+        
         % CALCULATE ALL DISTANCES FROM THE ORIGIN
         distances = sqrt(fx.^2+fy.^2+fz.^2);                
         
         % CLIPPING
         % Don't draw particles that are too far away
+        a = numel(fx);
         indices = distances<zFar;
         fx = fx(indices);
         fy = fy(indices);
         fz = fz(indices);
         fs = fs(indices);
         distances = distances(indices);       
+        b = numel(fx);
+        clipped(n) = a-b;
         
         % SORT FROM FAR TO NEAR
         % So that the nearer dots are displayed in front of the further
@@ -308,71 +298,45 @@ for k=1:numRuns     % for each trial
         fs = fs(sort_idx);
         distances = distances(sort_idx);
         
+        numshown(n) = numel(fx);
+        
         % THE FOLLOWING IS FOR DEBUGGING PURPOSES
         if isempty(fx) && ~crash_alert
-            fprintf('CRASH COMING in TRIAL %d, FRAME %d', k, n);
+            fprintf('EMPTY SPACE ENCOUNTERED in TRIAL %d, FRAME %d', k, n);
             crash_alert = true;
-            crash_site = origin_pos + [cumulative_rl cumulative_ud cumulative_fb]
+            %crash_site = origin_pos + [cumulative_rl cumulative_ud cumulative_fb]
         end;
         
         % PROJECTION
-        [sx{n}, sy{n}] = project3d([fx; fy; fz], MP, viewport);
-        %[sx{n}, sy{n}] = project3dOriginal([fx; fy; fz],modelviewMatrix,projectionMatrix,viewport);
-        %[sx{n}, sy{n}] = project3dBasic([fx; fy; fz],modelviewMatrix,projectionMatrix,viewport);
-
-        output(k).xymatrix{n} = [sx{n}; sy{n}];
-        %totaldots(n) = size(sx{n},2);
-        % Color and size of dots
-        output(k).dotsize{n} = max(min(63, fs./distances),1);
+        %[sx{n}, sy{n}] = project3d([fx; fy; fz], MP, viewport);  
+        [sx{n}, sy{n}] = project3d([fx; fy; fz], modelviewMatrix, projectionMatrix, viewport);  
+        %[sx{n}, sy{n}, ~] = gluProject(fx, fy, fz, modelviewMatrix, projectionMatrix, viewport);      
+        output(k).xymatrix{n} =[sx{n}; sy{n}];
+        
+        % COLOR AND SIZE OF DOTS
+        % distanceRatios connects virtual-world sizes (in cm) with
+        % real-world centimetres: the ratio is 1 when the object is located
+        % exactly in the plane of the screen.
+        distanceRatios = ScreenData.flyDistance./distances;
+        % convert sizes from cm to pixels for PTB DrawDots()
+        output(k).dotsize{n} = max( pxPerCm*fs.*distanceRatios,1);
+        %output(k).dotsize{n} = max(min(63, pxPerCm*ScreenData.flyDistance*fs./distances),1);
+        % Colour = greyscale
         output(k).color{n} = repmat(255*distances/zFar, 3, 1);
-    end;
-    origin_pos = origin_pos + [cumulative_rl cumulative_ud cumulative_fb]
+    end
+   % origin_pos = origin_pos + [cumulative_rl cumulative_ud cumulative_fb];
     
     output(k).center = [];
+    %output(k).motion_parameters = motion_parameters;
+    
+    
+    %numel(find(clipped))
+    %numel(find(culled))
+    %numshown./numDots
+    %numDots
 end
-
-%fprintf('AVERAGE NUMBER OF DOTS (totaldots) was %f\n', mean(totaldots));
-
-Screen('EndOpenGL', ScreenData.wPtr);
-
-
 
 function [x1,y] = rotateXY(x, y, angle)
 % rotates coordinate (x, y) angle degrees around origin
-
 x1 = x*cos(angle) - y*sin(angle);
 y  = y*cos(angle) + x*sin(angle);
-
-
-
-% NOTE I had the following block at the beginning of the target stuff:
-%{
-        % THIS BLOCK NEEDS TO BE COMMENTED IN/OUT
-        % TO TOGGLE WHETHER THE TARGET MOVES WITH THE BACKGROUND OR NOT
-        % sort of - except that the meaning of yaw, roll etc has changed -
-        % need to modify them by multiplying by ifi as before
-        if P.yaw(k) ~= 0
-            [target_start(1), target_start(3)] = rotateXY(target_start(1), target_start(3), P.yaw(k));
-            [target_end(1), target_end(3)] = rotateXY(target_end(1), target_end(3), P.yaw(k));
-            [target_pos(1), target_pos(3)] = rotateXY(target_pos(1), target_pos(3), P.yaw(k));
-        end
-      
-       %pitch - affects y and z
-        if P.pitch(k) ~= 0
-            [target_start(2), target_start(3)] = rotateXY(target_start(2), target_start(3), P.pitch(k));
-            [target_end(2), target_end(3)] = rotateXY(target_end(2), target_end(3), P.pitch(k));
-            [target_pos(2), target_pos(3)] = rotateXY(target_pos(2), target_pos(3), P.pitch(k));
-        end
-
-         %roll - affects x and y
-        if P.roll(k) ~= 0
-            [target_start(1), target_start(2)] = rotateXY(target_start(1), target_start(2), P.roll(k));
-            [target_end(1), target_end(2)] = rotateXY(target_end(1), target_end(2), P.roll(k));
-            [target_pos(1), target_pos(2)] = rotateXY(target_pos(1), target_pos(2), P.roll(k));
-        end
-        
-        %disp('target translate'), tic
-        target_start = target_start + [P.rl(k); P.ud(k); P.fb(k)];  % fly translation
-        target_end = target_end + [P.rl(k); P.ud(k); P.fb(k)];  % fly translation
-        target_pos = target_pos + [P.rl(k); P.ud(k); P.fb(k)];  % fly translation
-%}

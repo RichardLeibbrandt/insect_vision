@@ -71,7 +71,8 @@ end
 
 critInput.textures  = textures;
 critInput.numFrames = numFrames;
-critInput.nSwitch   = P.fps / ScreenData.hz;
+%critInput.nSwitch   = P.fps / ScreenData.hz;
+critInput.nSwitch   = P.fps * ScreenData.ifi;
 
 critInput.dstRect   = dstRect;
 critInput.textureIndex = textureIndex;

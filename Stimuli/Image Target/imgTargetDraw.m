@@ -1,19 +1,14 @@
-function Parameters = rectTargetDraw(wPtr, n, k, ifi, Parameters)
-%Parameters: RGB, POSITION, DELTAPOSITION
-%Draw a rect in wPtr to position, modified by n*deltaPosition
-%
+function Parameters = imgTargetDraw(wPtr, n, k, ifi, Parameters)
 
 %--------------------------------------------------------------------------
-% FlyFly v2
+% FlyFly v3.1
 %
-% Jonas Henriksson, 2010                                     info@flyfly.se
+% Richard Leibbrandt 2017                               
 %--------------------------------------------------------------------------
 
-%Screen('FillRect', wPtr, Parameters.RGB(:,k) , Parameters.pos(:,k) + (n-1)*Parameters.deltaPos(:,k));
 
 angle = 0;
 dstRect = Parameters.pos(:,k) + (n-1)*Parameters.deltaPos(:,k);
-%Screen('DrawTexture', wPtr, Parameters.texturePtr(1), Parameters.srcRect, dstRect, angle);
 Screen('DrawTexture', wPtr, Parameters.texturePtr(1), [], dstRect, angle);
  
  

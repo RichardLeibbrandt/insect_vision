@@ -48,53 +48,64 @@ S.triggerRGBoff = ScreenData.triggerRGBoff;
 
 fprintf('Calculating (might take some time if you have a starfield with many dots)... ');
 for z = 1:numLayers
-    
+
     % GET CRITICAL INPUT AND DRAW FUNCTION FOR EACH LAYER
     fcnPrep  = Stimulus.layers(z).fcnPrep;
     name = func2str(fcnPrep);
-    data     = Stimulus.layers(z).data(1:end, TrialSubset);
-    impulse  = Stimulus.layers(z).impulse;
-    
-        % DLP or normal mode
+    % DLP or normal mode
     if S.dlp
         NumSubframes = 3;
     else
         NumSubframes = 1;
-    end;
-    
-    % GET STIMULUS TIMES FOR EACH LAYER
-    % Horrible hack to use velocity instead of time for target3D!
-    
-    % We need to precalculate things like the target start
-    % and end position etc. AND then we need to calculate them all over
-    % again when we actually run fcnPrep. Because there is no mechanism for
-    % passing in extra information from animationLoop to fcnPrep.
-    % AND in fact we need to copy and paste this code a third time, into
-    % getStimImages!!!
-    
-    % This is obviously non-ideal but is the quickest way to hack out
-    % something that works.
-    % If any other stimuli in future need to deviate from the standard
-    % process, it may be worthwhile rethinking and rewriting FlyFly. For
-    % the moment, we just make this one exception for target3D.
-    if strcmpi(name, 'target3dPrep')    
-        s_az = deg2rad(data(2,:)/NumSubframes);
-        s_el = deg2rad(data(3,:)/NumSubframes);
-        start_dist  = data(4,:)/NumSubframes;
-        e_az = deg2rad(data(5,:)/NumSubframes);
-        e_el = deg2rad(data(6,:)/NumSubframes);
-        end_dist  = data(7,:)/NumSubframes;  
-        velocity = data(8,:)/NumSubframes;
+    end
+      
+    % Hacky solution to Target 3D - because we specify velocity instead of
+    % number of frames, the number of frames needs to be calculated and 
+    % "slipped into" the data field.
+    % Also note that we place the "pursuit" field into settings, to
+    % distinguish between a "plain" vs a "pursuit" Target 3D stimulus.
+    % This code is duplicated in animationLoop and getStimImages.
+    % Target3D (in both versions) violates the "spirit" of Flyfly, by not
+    % fitting into the framework of user-specified frame lengths.
+    if strcmpi(name, 'target3dPrep') 
+
+        % This next line is the hacky thing that makes the two stimuli work...
+        % Afaik, you're not supposed to misuse settings in this way,
+        % but there seem to be few other neat-ish solutions.
+        % pursuit distinguishes between "Target 3D" and "Target 3D (Pursuit)".
+        pursuit = Stimulus.layers(z).settings(1).pursuit;
         
-        s1 =  start_dist.*cos(s_el);
-        e1 =  end_dist.*cos(e_el);
-        target_start = [-s1.*sin(s_az); start_dist.*sin(s_el); s1.*cos(s_az)];
-        target_end = [-e1.*sin(e_az); end_dist.*sin(e_el); e1.*cos(e_az)];
-        target_distances = sqrt(sum((target_end-target_start).^2));
+        data = Stimulus.layers(z).data(1:end, TrialSubset);
         
-        data(end-3,:) = floor(target_distances ./ (velocity*S.ifi)); %HACK!!!
-        Stimulus.layers(z).data(1:end, TrialSubset) = data; % WORSE HACK!! to save it back to file
-    end;
+        ret = prepareForTarget3D(pursuit, data, S.ifi, NumSubframes);
+        
+        % Now hack the number of frames back into data and settings!!
+        data(end-3,:) = ret.num_frames;
+        Stimulus.layers(z).data(1:end, TrialSubset) = data;
+
+        % and now put the target start and end positions into settings, so the 
+        % prep function can use them! (They have already been calculated,
+        % so shouldn't calculate them again.)
+        for k = 1:length(Stimulus.layers(z).settings(TrialSubset))
+            idx = TrialSubset(k);
+            Stimulus.layers(z).settings(idx).target_start = ret.target_start(:, k);
+            Stimulus.layers(z).settings(idx).target_end = ret.target_end(:, k);
+        end
+    end 
+    
+    data     = Stimulus.layers(z).data(1:end, TrialSubset);
+    impulse  = Stimulus.layers(z).impulse;
+
+    if strcmpi(name, 'prTargetPrep')
+        fps = 1/ScreenData.ifi;
+        numRuns = 3000;
+        num_frames = round(0.25*fps);
+        pause_time = round(0.15*fps);
+        data = repmat(data, 1, numRuns);
+        data(end-3,:) = ones(1, size(data, 2)) * num_frames;
+        data(end,:) = ones(1, size(data, 2)) * pause_time;
+        Stimulus.layers(z).data(1:end, TrialSubset) = data; % HACK!! to save it back to file
+    end
     
     T.time(z,:)     = data(end-3,:);
     T.pause(z,:)    = data(end-2,:);
@@ -109,16 +120,23 @@ for z = 1:numLayers
     end
     
     critInput{z} = fcnPrep(data, ScreenData, settings, NumSubframes);
-    %{
-    % DLP or normal mode
-    if S.dlp
-        critInput{z} = fcnPrep(data, ScreenData, settings, 3);
-    else
-        critInput{z} = fcnPrep(data, ScreenData, settings, 1);
-    end
-    %}
-    % save image data if using rolling image with auto generated image
+
+    % The following cases show a hacky way of getting around the normal structure of
+    % Flyfly and storing arbitrary data from the experiment.
+    % The process is to: (1) include your data in the output from fcnPrep 
+    % (so it goes into critInput), (2) add it as a field to Stimulus, or to the appropriate
+    % layer in Stimulus, giving it whatever name you like, and (3) remove
+    % the data from critInput.
     
+%     if strcmpi(name, 'target3dPrep')
+%         motion_parameters = critInput{z}.motion_parameters;
+%         if ~isempty(motion_parameters)
+%             Stimulus.layers(z).motion_parameters = motion_parameters;
+%             critInput{z} = rmfield(critInput{z},'motion_parameters');
+%         end
+%     end
+    
+    % save image data if using rolling image with auto generated image
     if strncmp(name, 'rollingImage', length('rollingImage'))
         for k=1:length(settings)
             if ((strcmp(name(13),'P') && settings(k).box3{2}==1) || ...
@@ -129,7 +147,7 @@ for z = 1:numLayers
             end
         end
     end
-
+    
     fcnDraw{z} = Stimulus.layers(z).fcnDraw;
 end
 fprintf('Done!\n');
@@ -203,6 +221,7 @@ disp('---------------------------------------------------------- ');
 if UserSettings.saveParameters
     ddstimulus = struct(Stimulus);
     ddstimulus = rmfield(ddstimulus, 'hGui');   % opens figure and causes Matlab to hang
+    % DEBUGDATA CREATED HERE!
     debugData.stimulus = ddstimulus;
     debugData.screenData   = ScreenData;
     debugData.userSettings = UserSettings;

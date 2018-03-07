@@ -23,44 +23,55 @@ fcnDraw = cell(numLayers,1);
 ScreenData.ifi = 1/fps;
 ScreenData.hz  = fps;
 
+if ScreenData.dlp
+    NumSubframes = 3;
+else
+    NumSubframes = 1;
+end
+    
 fprintf('Calculating... ');
 for z = 1:numLayers
     % GET CRITICAL INPUT AND DRAW FUNCTION FOR EACH LAYER
     fcnPrep  = Stimulus.layers(z).fcnPrep;
+    name = func2str(fcnPrep);
+    
+    % Hacky solution to Target 3D - because we specify velocity instead of
+    % number of frames, the number of frames needs to be calculated and 
+    % "slipped into" the data field.
+    % Also note that we place the "pursuit" field into settings, to
+    % distinguish between a "plain" vs a "pursuit" Target 3D stimulus.
+    % This code is duplicated in animationLoop and getStimImages.
+    % Target3D (in both versions) violates the "spirit" of Flyfly, by not
+    % fitting into the framework of user-specified frame lengths.
+    if strcmpi(name, 'target3dPrep') 
+
+        % This next line is the hacky thing that makes the two stimuli work...
+        % Afaik, you're not supposed to misuse settings in this way,
+        % but there seem to be few other neat-ish solutions.
+        % pursuit distinguishes between "Target 3D" and "Target 3D (Pursuit)".
+        pursuit = Stimulus.layers(z).settings(1).pursuit;
+        
+        data = Stimulus.layers(z).data(1:end, TrialSubset);
+        
+        ret = prepareForTarget3D(pursuit, data, ScreenData.ifi, NumSubframes);
+        
+        % Now hack the number of frames back into data and settings!!
+        data(end-3,:) = ret.num_frames;
+        Stimulus.layers(z).data(1:end, TrialSubset) = data;
+
+        % and now put the target start and end positions into settings, so the 
+        % prep function can use them! (They have already been calculated,
+        % so shouldn't calculate them again.)
+        for k = 1:length(Stimulus.layers(z).settings(TrialSubset))
+            idx = TrialSubset(k);
+            Stimulus.layers(z).settings(idx).target_start = ret.target_start(:, k);
+            Stimulus.layers(z).settings(idx).target_end = ret.target_end(:, k);
+        end
+    end 
+    
     data     = Stimulus.layers(z).data(1:end, TrialSubset);
     impulse  = Stimulus.layers(z).impulse;
-    
-    % AWFUL HACK!!! also see animationLoop
-    % This is  to accommodate the fact that for Target3D,
-    % we are providing the velocity and end points, rather
-    % than the number of frames.
-    % Consequently, number of frames needs to be calculated here.
-    name = func2str(fcnPrep);
-    if strcmpi(name, 'target3dPrep') 
-        if ScreenData.dlp
-            NumSubframes = 3;
-        else
-            NumSubframes = 1;
-        end;
-        ifi = ScreenData.ifi;
-        s_az = deg2rad(data(2,:)/NumSubframes);
-        s_el = deg2rad(data(3,:)/NumSubframes);
-        start_dist  = data(4,:)/NumSubframes;
-        e_az = deg2rad(data(5,:)/NumSubframes);
-        e_el = deg2rad(data(6,:)/NumSubframes);
-        end_dist  = data(7,:)/NumSubframes;  
-        velocity = data(8,:)/NumSubframes;
-        
-        s1 =  start_dist.*cos(s_el);
-        e1 =  end_dist.*cos(e_el);
-        target_start = [-s1.*sin(s_az); start_dist.*sin(s_el); s1.*cos(s_az)];
-        target_end = [-e1.*sin(e_az); end_dist.*sin(e_el); e1.*cos(e_az)];
-        target_distances = sqrt(sum((target_end-target_start).^2));
-        
-        data(end-3,:) = floor(target_distances ./ (velocity*ifi)); %HACK!!!
-        Stimulus.layers(z).data(1:end, TrialSubset) = data; % WORSE HACK!! to save it back to file
-    end;
-    
+
     % GET STIMULUS TIMES FOR EACH LAYER
     T.time(z,:)     = data(end-3,:);
     T.pause(z,:)    = data(end-2,:);

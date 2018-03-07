@@ -1,11 +1,11 @@
-function [critInput] = rectTargetPrep(Parameters, ScreenData, StimSettings, NumSubframes)
+function [critInput] = imgTargetPrep(Parameters, ScreenData, StimSettings, NumSubframes)
 %
 % Prepares input parameters for rectTargetDraw
 
 %--------------------------------------------------------------------------
-% FlyFly v2
+% FlyFly v3.1
 %
-% Jonas Henriksson, 2010                                   info@flyfly.se
+% Richard Leibbrandt 2017    
 %--------------------------------------------------------------------------
 
 if nargin<4
@@ -23,7 +23,6 @@ P.angle       = Parameters(6,:);
 numRuns = size(Parameters,2);
 
 for k = 1:numRuns
-    %imagePath = 'louie.jpg';
     imagePath        = StimSettings(k).path1{2};
     [I, ~, alpha] = imread(imagePath);
     if ~isempty(alpha)
@@ -49,15 +48,12 @@ for k = 1:numRuns
     end;
 end
 
-%how many fraction pixels target moves each frame
+% the x and y components of the movement vector
 delta_x = cos(P.angle*pi/180);
 delta_y = -sin(P.angle*pi/180);
 
 critInput.RGB      = [0; 0; 0];
-%{
-critInput.pos      = [P.xpos; P.ypos; ...
-    P.xpos + P.width; P.ypos + P.height];
-%}
+
 critInput.pos      = [P.xpos - P.width/2; P.ypos - P.height/2; ...
     P.xpos + P.width/2; P.ypos + P.height/2];
 

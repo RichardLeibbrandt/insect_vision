@@ -32,7 +32,7 @@ y(removables) = [];
 z(removables) = [];
 
 
-sizes = ones(1, length(x)) * size * maxDistance;
+sizes = ones(1, length(x)) * size;
 
 end
 
