@@ -317,7 +317,8 @@ for k=1:numRuns     % for each trial
         % distanceRatios connects virtual-world sizes (in cm) with
         % real-world centimetres: the ratio is 1 when the object is located
         % exactly in the plane of the screen.
-        distanceRatios = ScreenData.flyDistance./distances;
+        %distanceRatios = ScreenData.flyDistance./distances;
+        distanceRatios = ScreenData.flyDistance./-fz;
         % convert sizes from cm to pixels for PTB DrawDots()
         output(k).dotsize{n} = max( pxPerCm*fs.*distanceRatios,1);
         %output(k).dotsize{n} = max(min(63, pxPerCm*ScreenData.flyDistance*fs./distances),1);

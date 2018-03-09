@@ -1,11 +1,4 @@
-% Fly does not move. Target follows trajectory defined against fly's
-% position. 
-
 function output = target3dPrep(Parameters, ScreenData, StimSettings, NumSubframes)
-%
-% Takes input from the user inteface and makes pre computations.
-%
-
 %--------------------------------------------------------------------------
 % FlyFly v3.1
 %
@@ -21,19 +14,12 @@ global GL;
 [~, numRuns] = size(Parameters);
 
 P.targetSize  = Parameters(1,:);
-P.start_az    = Parameters(2,:)/NumSubframes;   
-P.start_el    = Parameters(3,:)/NumSubframes;   
-P.start_dist  = Parameters(4,:)/NumSubframes;   
-P.end_az    = Parameters(5,:)/NumSubframes;   
-P.end_el    = Parameters(6,:)/NumSubframes;   
-P.end_dist  = Parameters(7,:)/NumSubframes;  
-P.velocity  = Parameters(8,:)/NumSubframes; 
 P.target_noise  = Parameters(9,:)/NumSubframes;
 P.t           = Parameters(10,:)*NumSubframes;
 
 % z-clipping planes
 zFar = 200;
-zNear = 3;
+zNear = 6;
 
 % Field of view (y)
 fovy = 2*atand(0.5*ScreenData.monitorHeight/ScreenData.flyDistance);
@@ -44,26 +30,7 @@ P.monHeight    = ScreenData.monitorHeight;
 P.monWidth = P.monHeight * ar;
 P.viewDistance = zFar;
 
-ifi = ScreenData.ifi;
-
 pxPerCm = ScreenData.rect(4) ./ P.monHeight;
-
-%[center(1), center(2)] = RectCenter(ScreenData.rect);
-center = ScreenData.flyPos(1:2);
-
-hPx = ScreenData.flyPos(4)-center(2); % px offset from center
-h   = hPx/pxPerCm;
-
-cameraLookAt = [(ScreenData.flyPos(3:4)-ScreenData.flyPos(1:2))./pxPerCm ScreenData.flyDistance];
-cameraLookAt = [0, 0, -1];
-tiltAngleX = atand(((ScreenData.flyPos(3)-ScreenData.flyPos(1))./pxPerCm)/ScreenData.flyDistance);
-tiltAngleY = atand(((ScreenData.flyPos(4)-ScreenData.flyPos(2))./pxPerCm)/ScreenData.flyDistance);
-
-center(2) = center(2) + h*pxPerCm;
-
-gamma1 = (atan(h/ScreenData.flyDistance))/180*pi;
-gamma2 = (pi/2 - gamma1);
-
 
 Screen('BeginOpenGL', ScreenData.wPtr);
 
@@ -79,13 +46,9 @@ glLoadIdentity;
 
 gluPerspective(fovy, ar, zNear, zFar);
 
-% glRotatef(-tiltAngleX,1,0,0);
-% glRotatef(tiltAngleY,0,1,0);
-
 glMatrixMode(GL.MODELVIEW);
 glLoadIdentity;
 
-%gluLookAt(0,0,0, cameraLookAt(1),cameraLookAt(2),cameraLookAt(3), 0,1,0);
 gluLookAt(0,0,0,  0,0,-1,  0,1,0);
 
 % These are used in gluProject (3d -> 2d coordinates)
@@ -98,29 +61,13 @@ modelviewMatrix = reshape(modelview,4,4);
 % Get the viewport
 viewport = glGetIntegerv(GL.VIEWPORT);
 viewport = double(viewport);
-
-MP = projectionMatrix*modelviewMatrix;
+Screen('EndOpenGL', ScreenData.wPtr);
 
 output(numRuns) = struct('xymatrix',[],'color',[],'dotsize',[],'center',[], 'num_frames', []);
 
 for k=1:numRuns     % for each trial
-    
     N = P.t(k);
-
-    all_show = true;
-%     s_el = deg2rad(P.start_el(k));
-%     s_az = deg2rad(P.start_az(k));
-%     e_el = deg2rad(P.end_el(k));
-%     e_az = deg2rad(P.end_az(k));
-    
-    %s1 =  -P.start_dist(k)*cos(s_el);
-    %e1 =  -P.end_dist(k)*cos(e_el);
-    %target_start = [-s1*sin(s_az); P.start_dist(k)*sin(s_el); s1*cos(s_az)];
-    %target_end = [-e1*sin(e_az); P.end_dist(k)*sin(e_el); e1*cos(e_az)];
-    
-%     target_start = [P.start_dist(k)*sin(s_az); P.start_dist(k)*sin(s_el); -P.start_dist(k)];
-%     target_end = [P.end_dist(k)*sin(e_az); P.end_dist(k)*sin(e_el); -P.end_dist(k)];
-           
+%poss = zeros(3,N);
     target_start = StimSettings(k).target_start;
     target_end = StimSettings(k).target_end;
     target_pos = target_start;
@@ -137,15 +84,13 @@ for k=1:numRuns     % for each trial
         target_inc = target_inc + noise.*target_inc;
         
         target_pos = target_pos + target_inc;   % perform movement
-        
+        %poss(:,n) = target_pos;
         % Target clipping
         target_distance = sqrt(target_pos(1)^2 + target_pos(2)^2 +target_pos(3)^2);
         show_target = target_distance < zFar;
         
         scr_target = []; 
         if show_target
-            
-          
             % Target culling
             ht = abs(target_pos(3)*tand(fovy/2));
             wt = ht*ar;
@@ -160,11 +105,7 @@ for k=1:numRuns     % for each trial
                 % program)
                 %[scr_start(1), scr_start(2)] =  project3d(target_start, modelviewMatrix, projectionMatrix, viewport); 
                 %[scr_end(1), scr_end(2)] =  project3d(target_end, modelviewMatrix, projectionMatrix, viewport); 
-            else
-                disp('FAILED TEST 2'); target_pos
             end;
-        else
-            disp('FAILED TEST 1'); target_pos
         end;
         
         if show_target
@@ -179,29 +120,15 @@ for k=1:numRuns     % for each trial
             %}
             
             output(k).target_xy{n} = scr_target;
-
-            %colour_block = 255*(target_distance-zNear)/zFar*ones(1, 3);
             colour_block = 255*target_distance/zFar*ones(1, 3);
             output(k).target_color{n} = colour_block;
- 
             % convert sizes from cm to pixels for PTB DrawDots()
-            output(k).target_dotsize{n} = max( pxPerCm*P.targetSize(k)*ScreenData.flyDistance/target_distance,1);
-%             dist_block = min(P.targetSize(k)./(target_distance+0.1),255); 
-%             output(k).target_dotsize{n} =  dist_block;
-        else
-            disp('FAILED TEST 3'); target_pos
+%            output(k).target_dotsize{n} = max( pxPerCm*P.targetSize(k)*ScreenData.flyDistance/target_distance,1);
+            output(k).target_dotsize{n} = max( pxPerCm*P.targetSize(k)*ScreenData.flyDistance/-target_pos(3),1);
         end;
-        
-        all_show = all_show && show_target;
     end
-    
-    if ~all_show
-        disp('SOME TESTS FAILED');
-    end;
-    
+    % poss
     output(k).center = [];
 end
-
-Screen('EndOpenGL', ScreenData.wPtr);
 
 
