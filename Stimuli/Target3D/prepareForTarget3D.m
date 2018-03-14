@@ -13,8 +13,8 @@ function ret = prepareForTarget3D(pursuit, data, ifi, NumSubframes)
         target_start = [s1.*sin(s_az); start_dist.*sin(s_el); -s1.*cos(s_az)];
         target_end = [e1.*sin(e_az); end_dist.*sin(e_el); -e1.*cos(e_az)];
     else            % distance = Z "depth" of XY plane from fly's eye
-        target_start = [start_dist.*sin(s_az); start_dist.*sin(s_el); -start_dist];
-        target_end = [end_dist.*sin(e_az); end_dist.*sin(e_el); -end_dist];
+        target_start = [start_dist.*tan(s_az); start_dist.*tan(s_el); -start_dist];
+        target_end = [end_dist.*tan(e_az); end_dist.*tan(e_el); -end_dist];
     end
     
     target_distances = sqrt(sum((target_end-target_start).^2));
