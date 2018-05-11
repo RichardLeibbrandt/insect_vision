@@ -22,7 +22,7 @@ function varargout = tableGui(varargin)
 
 % Edit the above text to modify the response to help tableGui
 
-% Last Modified by GUIDE v2.5 16-Mar-2012 10:28:54
+% Last Modified by GUIDE v2.5 12-Apr-2018 13:05:48
 
 %--------------------------------------------------------------------------
 % FlyFly v2
@@ -2138,3 +2138,53 @@ function numStepSizes_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+
+function gaussianWhiteNoiseVariance_Callback(hObject, eventdata, handles)
+% hObject    handle to gaussianWhiteNoiseVariance (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of gaussianWhiteNoiseVariance as text
+%        str2double(get(hObject,'String')) returns contents of gaussianWhiteNoiseVariance as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function gaussianWhiteNoiseVariance_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to gaussianWhiteNoiseVariance (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in applyWhiteNoiseBtn.
+function applyWhiteNoiseBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to applyWhiteNoiseBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+    chstimuli = getappdata(0, 'chstimuli');
+    navData   = getappdata(0, 'navData');
+
+    index    = navData.activeStim;
+    z        = navData.marker(index);
+
+    data     = chstimuli(index).layers(z).data;
+    [R, C] = size(data);
+    
+    row = str2num(get(handles.chosenRow, 'String'));
+
+    variance = str2num(get(handles.gaussianWhiteNoiseVariance, 'String'));
+    noise_vector = pseudo_normal(0, variance, C);
+
+    data(row, 1:end) = data(row, 1:end) + noise_vector;
+
+    chstimuli(index).layers(z).data = data;
+    setappdata(0, 'chstimuli', chstimuli);
+
+    updateFigure(handles);

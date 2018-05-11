@@ -69,7 +69,7 @@ for z = 1:numLayers
     % fitting into the framework of user-specified frame lengths.
     if strcmpi(name, 'target3dPrep') 
 
-        % This next line is the hacky thing that makes the two stimuli work...
+        % This is a secondary hacky solution that makes the idea of two stimuli work...
         % Afaik, you're not supposed to misuse settings in this way,
         % but there seem to be few other neat-ish solutions.
         % pursuit distinguishes between "Target 3D" and "Target 3D (Pursuit)".
@@ -77,15 +77,17 @@ for z = 1:numLayers
         
         data = Stimulus.layers(z).data(1:end, TrialSubset);
         
+        % prepareForTarget3D returns fields named "num_frames", "target_start",
+        % "target_end". These are calculated based on input data, and are needed
+        % later when the "real" prep function (target3dPrep) is executed.
         ret = prepareForTarget3D(pursuit, data, S.ifi, NumSubframes);
         
-        % Now hack the number of frames back into data and settings!!
+        % Now hack the number of frames back into data!
         data(end-3,:) = ret.num_frames;
         Stimulus.layers(z).data(1:end, TrialSubset) = data;
 
         % and now put the target start and end positions into settings, so the 
-        % prep function can use them! (They have already been calculated,
-        % so shouldn't calculate them again.)
+        % prep function can use them! 
         for k = 1:length(Stimulus.layers(z).settings(TrialSubset))
             idx = TrialSubset(k);
             Stimulus.layers(z).settings(idx).target_start = ret.target_start(:, k);
@@ -104,7 +106,7 @@ for z = 1:numLayers
         data = repmat(data, 1, numRuns);
         data(end-3,:) = ones(1, size(data, 2)) * num_frames;
         data(end,:) = ones(1, size(data, 2)) * pause_time;
-        Stimulus.layers(z).data(1:end, TrialSubset) = data; % HACK!! to save it back to file
+        Stimulus.layers(z).data = data; % HACK!! to save it back to file
     end
     
     T.time(z,:)     = data(end-3,:);
@@ -121,21 +123,14 @@ for z = 1:numLayers
     
     critInput{z} = fcnPrep(data, ScreenData, settings, NumSubframes);
 
-    % The following cases show a hacky way of getting around the normal structure of
-    % Flyfly and storing arbitrary data from the experiment.
-    % The process is to: (1) include your data in the output from fcnPrep 
-    % (so it goes into critInput), (2) add it as a field to Stimulus, or to the appropriate
-    % layer in Stimulus, giving it whatever name you like, and (3) remove
-    % the data from critInput.
-    
-%     if strcmpi(name, 'target3dPrep')
-%         motion_parameters = critInput{z}.motion_parameters;
-%         if ~isempty(motion_parameters)
-%             Stimulus.layers(z).motion_parameters = motion_parameters;
-%             critInput{z} = rmfield(critInput{z},'motion_parameters');
-%         end
-%     end
-    
+    % General mechanism for storing general-purpose data related to
+    % the experiment that has been generated during preparation.
+    % Such data can be included in the "extraData" field returned by
+    % fcnPrep.
+    if isfield(critInput{z}, 'extraData')
+        Stimulus.layers(z).extraData = critInput{z}.extraData;
+    end
+
     % save image data if using rolling image with auto generated image
     if strncmp(name, 'rollingImage', length('rollingImage'))
         for k=1:length(settings)

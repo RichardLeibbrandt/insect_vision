@@ -19,15 +19,20 @@ P.xpos        = Parameters(3,:);
 P.ypos        = Parameters(4,:);
 P.velocity    = Parameters(5,:)/NumSubframes;
 P.angle       = Parameters(6,:);
+P.contrast  = Parameters(7,:);
 
 numRuns = size(Parameters,2);
 
 for k = 1:numRuns
     imagePath        = StimSettings(k).path1{2};
     [I, ~, alpha] = imread(imagePath);
+    I = double(I);
+    I = P.contrast(k)*(I-127) + 127;
     if ~isempty(alpha)
         I(:,:,4) = alpha;
     end
+
+    
     texturePtr(k) = Screen('MakeTexture', ScreenData.wPtr, I);
     aratio = size(I,1)/size(I,2);
     P.srcRect = [0; 0; size(I,1); size(I,2)]

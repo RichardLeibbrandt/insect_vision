@@ -27,8 +27,8 @@ experiment_names = {'Rect Target', 'Sine Grating', 'Rolling Image', ...
             'White Noise', 'Sine Grating RF', 'Mouse Target', 'Grid', ...
             'TextString', 'Rolling Image MII', 'Dual Apertures', ...
             'Starfield 1: Cylinder', 'Starfield 2: 3D Space', '3D Target', ...
-            'Image Target' 'Paloma Target Replication', '3D Target (Pursuit)'};%, ...
-            %'Starfield 3: Moving Fly'};
+            'Image Target' 'Paloma Target Replication', '3D Target (Pursuit)', ...
+            'Starfield 3: Jumps'};
 common_data = [60; 0; 0; 0];
 
 switch Name
@@ -245,6 +245,7 @@ switch Name
                 rowNames = {'Dot size', 'Dot density', ...
                     'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll', ...
                     'Background Noise', 'Retain into next Trial'};
+
                 
             case 17 %3d Target
                 
@@ -267,10 +268,10 @@ switch Name
                 
                  settings.path1  = {'Image Path', 'Images/louie.jpg', '*.*'};
                 
-                 data = [ 0; 0; 20; 20; 60; 0];
+                 data = [ 0; 0; 20; 20; 60; 0; 1];
                 
                 rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
-                    'Velocity', 'Direction'};
+                    'Velocity', 'Direction', 'Contrast'};
                        
             case 19 %Paloma Target Replication
                 
@@ -282,12 +283,12 @@ switch Name
                 %common_data(4) = 0.15;
                 rowNames = {};
                        
-                case 20 %3d Target for Pursuit experiments
+            case 20 %3d Target for Pursuit experiments
                 
                 fcnPrep = @target3dPrep; 
                 fcnDraw = @target3dDraw; 
                 
-               data = [1; 0; 0; 50; 0; 0; 20; 10; 0];
+                data = [1; 0; 0; 50; 0; 0; 20; 10; 0];
                 
                 rowNames = {'Target Size', 'Target Start Azimuth', 'Target Start Elevation', 'Target Start Distance', ...
                     'Target End Azimuth', 'Target End Elevation', 'Target End Distance', ...
@@ -295,7 +296,22 @@ switch Name
                 
                 settings.global = 0;
                 settings.pursuit = true;
-            %{    
+            case 21 %Starfield 3
+                
+                fcnPrep = @starfield3Prep2; 
+                fcnDraw = @starfield3Draw; 
+                
+                data = [2; 1; 0; 0; 0; 0; 0; 0; 1];
+                
+                rowNames = {'Dot size', 'Dot density', ...
+                    'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll', 'Duration'}; 
+%                 
+%                 data = [2; 1; 0; 0; 0; 0; 0; 0];
+%                 
+%                 rowNames = {'Dot size', 'Dot density', ...
+%                     'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll'};
+                
+                %{
             case 21 %2D Background based on Starfield (but moving in flat space)
                 
                 fcnPrep = @background2DPrep;    % generate image

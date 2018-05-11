@@ -9,6 +9,6 @@ function Parameters = imgTargetDraw(wPtr, n, k, ifi, Parameters)
 
 angle = 0;
 dstRect = Parameters.pos(:,k) + (n-1)*Parameters.deltaPos(:,k);
-Screen('DrawTexture', wPtr, Parameters.texturePtr(1), [], dstRect, angle);
+Screen('DrawTexture', wPtr, Parameters.texturePtr(k), [], dstRect, angle);
  
  
