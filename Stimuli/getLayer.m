@@ -22,14 +22,28 @@ settings.edit3  = {'OFF', 0};
 settings.edit4  = {'OFF', 0};
 settings.edit5  = {'OFF', 0};
 
-experiment_names = {'Rect Target', 'Sine Grating', 'Rolling Image', ...
-            'Color Fill', '.Mat Sequence', 'Aperture', 'Flicker Rect', ...
-            'White Noise', 'Sine Grating RF', 'Mouse Target', 'Grid', ...
-            'TextString', 'Rolling Image MII', 'Dual Apertures', ...
-            'Starfield 1: Cylinder', 'Starfield 2: 3D Space', '3D Target', ...
-            'Image Target' 'Paloma Target Replication', '3D Target (Pursuit)', ...
-            'Starfield 3: Jumps'};
+% experiment_names = {'Rect Target', 'Sine Grating', 'Rolling Image', ...
+%             'Color Fill', '.Mat Sequence', 'Aperture', 'Flicker Rect', ...
+%             'White Noise', 'Sine Grating RF', 'Mouse Target', 'Grid', ...
+%             'TextString', 'Rolling Image MII', 'Dual Apertures', ...
+%             'Starfield 1: Cylinder', 'Starfield 2: 3D Space', '3D Target', ...
+%             'Image Target' 'Paloma Target Replication', '3D Target (Pursuit)', ...
+%             'Starfield 3: Jumps'};
+   
+experiment_names = {...
+    'Rect Target', 'Image Target', '3D Target', ...                 % 1, 2, 3
+    'Sine Grating', 'Color Fill', 'Rolling Image', ...              % 4, 5, 6
+    'Rolling Image MII', 'Starfield 2: 3D Space', 'Starfield 3: Jumps', ... % 7, 8, 9
+    '---- OTHER STIMULI ----', ...                                  % 10 (dummy)
+    'Sine Grating RF', 'Aperture', 'Dual Apertures', ...            % 11, 12, 13
+    'Flicker Rect', 'Mouse Target', 'Grid', ...                     % 14, 15, 16
+    '.Mat Sequence', 'Paloma Target Replication'};                  % 17, 18
+        
+% common_data = the default timing data
 common_data = [60; 0; 0; 0];
+% If individual stimuli require something other than the default, modify
+% timing_data instead of common_data
+timing_data = common_data;
 
 switch Name
     
@@ -47,8 +61,34 @@ switch Name
                 
                 rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
                     'Velocity', 'Direction', 'Brightness'};
+                               
+            case 2 %Image Target
                 
-            case 2 %Sine grating
+                fcnPrep = @imgTargetPrep;
+                fcnDraw = @imgTargetDraw;
+                
+                 settings.path1  = {'Image Path', 'Images/louie.jpg', '*.*'};
+                
+                 data = [ 0; 0; 20; 20; 60; 0; 1];
+                
+                rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
+                    'Velocity', 'Direction', 'Contrast'};   
+                
+            case 3 %3d Target
+                
+                fcnPrep = @target3dPrep; 
+                fcnDraw = @target3dDraw; 
+                
+               data = [1; 0; 0; 50; 0; 0; 20; 10; 0];
+                
+                rowNames = {'Target Size', 'Target Start Azimuth', 'Target Start Elevation', 'Target Start Distance', ...
+                    'Target End Azimuth', 'Target End Elevation', 'Target End Distance', ...
+                    'Velocity', 'Target Noise'};
+                
+                settings.global = 0;
+                settings.pursuit = false;
+               
+            case 4 %Sine grating
                 
                 fcnPrep = @sineGratingPrep;
                 fcnDraw = @sineGratingDraw;
@@ -59,7 +99,16 @@ switch Name
                     'PatchHeight', 'patchWidth', 'Patch Xpos', 'Patch Ypos',...
                     'Contrast'};
                 
-            case 3 %Rolling Image
+            case 5 %Color Fill
+                
+                fcnPrep = @colorFillPrep;
+                fcnDraw = @colorFillDraw;
+                
+                data = [127];
+                
+                rowNames = {'Brightness'};            
+            
+            case 6 %Rolling Image
                 
                 fcnPrep = @rollingImagePrep;
                 fcnDraw = @rollingImageDraw;
@@ -78,111 +127,7 @@ switch Name
                 settings.edit3  = {'(width)','640'};
                 settings.edit4  = {'(height)','480'};
                 
-            case 4 %Color Fill
-                
-                fcnPrep = @colorFillPrep;
-                fcnDraw = @colorFillDraw;
-                
-                data = [127];
-                
-                rowNames = {'Brightness'};
-                
-            case 5 %Mat sequence
-                
-                fcnPrep = @matSequencePrep;
-                fcnDraw = @matSequenceDraw;
-                
-                data = [160; 320; 240];
-                
-                rowNames = {'Fps', 'Xpos', 'Ypos'};
-                
-                settings.global = 0;
-                settings.path1  = {'.Mat path: ', [cd '/Mat sequences/out.mat'], '*.mat'};
-                settings.box1   = {'Use fullscreen', 0};
-                
-            case 6 %Aperture
-                
-                fcnPrep = @aperturePrep;
-                fcnDraw = @apertureDraw;
-                
-                data = [50; 0; 100; 100; 320; 280];
-                
-                rowNames = {'Transp Surround', 'Transp Hole', 'Width', 'Height', 'Xpos', 'Ypos'};
-                
-                settings.box1   = {'Use Rect', 0};
-                
-            case 7 %Flicker rect
-                
-                fcnPrep = @flickerRectPrep;
-                fcnDraw = @flickerRectDraw;
-                
-                data = [ 100; 80; 320; 240; 2; 0; 255];
-                
-                rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
-                    'FramesPerFlicker', 'Brightness 1', 'Brightness 2'};
-                
-                settings.box1  = {'Offset X function', 0};
-                settings.box2  = {'Offset Y function', 0};
-                settings.edit1 = {'X function: ', '100*sin(2*pi/3 *(n-1)*ifi)'};
-                settings.edit2 = {'Y function: ', '100*cos(2*pi/3 *(n-1)*ifi)'};
-                
-            case 8 %white noise
-                
-                fcnPrep = @whiteNoisePrep;
-                fcnDraw = @whiteNoiseDraw;
-                
-                data = [ 80; 100; 320; 240; 1; 1];
-                
-                rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
-                    'Contrast', 'Pixels'};
-                
-                settings.box1  = {'Offset X function', 0};
-                settings.box2  = {'Offset Y function', 0};
-                settings.edit1 = {'X function: ', '100*sin(2*pi/3 *(n-1)*ifi)'};
-                settings.edit2 = {'Y function: ', '100*cos(2*pi/3 *(n-1)*ifi)'};
-                
-            case 9 %sine grating Rf
-                
-                fcnPrep = @sineGratingRfPrep;
-                fcnDraw = @sineGratingRfDraw;
-                
-                data = [ 20; 2; 0; 16; 200; 200; 100; 100; 1];
-                
-                rowNames = {'Wavelength', 'Temporal Freq', 'Starting Direction', 'Steps' ...
-                    'PatchHeight', 'patchWidth', 'Patch Xpos', 'Patch Ypos', 'Contrast'};
-                
-                settings.box1   = {'Counter Clockwise', 0};
-                
-            case 10 %mouse target
-                
-                fcnPrep = @mouseTargetPrep;
-                fcnDraw = @mouseTargetDraw;
-                
-                data = [ 5; 100; 0];
-                
-                rowNames = {'Width', 'Height', 'Brightness'};
-                
-            case 11 %grid
-                
-                fcnPrep = @gridPrep;
-                fcnDraw = @gridDraw;
-                
-                data = [];
-                
-                rowNames = {};
-                
-            case 12 %TextString
-                
-                fcnPrep = @textStringPrep;
-                fcnDraw = @textStringDraw;
-                
-                data = [50; 220; 240];
-                
-                rowNames = {'Size', 'Xpos', 'Ypos'};
-                
-                settings.edit1  = {'Text String', 'FlyFly'};
-                
-            case 13 %Rolling Image MII
+           case 7 %Rolling Image MII
                 
                 fcnPrep = @rollingImageM2Prep;
                 fcnDraw = @rollingImageM2Draw;
@@ -208,8 +153,59 @@ switch Name
                 settings.edit3  = {'(patch movement)', '100*cos(n)'};
                 settings.edit4  = {'(width)','640'};
                 settings.edit5  = {'(height)','480'};
+      
+            case 8 %Starfield 2
                 
-            case 14 %Dual Apertures
+                fcnPrep = @starfieldPrep; %@starfieldCylPrep; 
+                fcnDraw = @starfieldDraw; %@starfieldCylDraw;
+                
+               data = [2; 1; 0; 0; 0; 0; 0; 0; 0; 0];
+                
+                rowNames = {'Dot size', 'Dot density', ...
+                    'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll', ...
+                    'Background Noise', 'Retain into next Trial'};
+                
+             case 9 %Starfield 3
+                
+                fcnPrep = @starfield3Prep2; 
+                fcnDraw = @starfield3Draw; 
+                
+                data = [2; 1; 0; 0; 0; 0; 0; 0; 1];
+                
+                rowNames = {'Dot size', 'Dot density', ...
+                    'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll', 'Duration'}; 
+            
+            case 10 % DUMMY - set everything to null
+                fcnPrep = [];
+                fcnDraw = [];
+                data = [];
+                rowNames = {};
+
+            case 11 %sine grating Rf
+                
+                fcnPrep = @sineGratingRfPrep;
+                fcnDraw = @sineGratingRfDraw;
+                
+                data = [ 20; 2; 0; 16; 200; 200; 100; 100; 1];
+                
+                rowNames = {'Wavelength', 'Temporal Freq', 'Starting Direction', 'Steps' ...
+                    'PatchHeight', 'patchWidth', 'Patch Xpos', 'Patch Ypos', 'Contrast'};
+                
+                settings.box1   = {'Counter Clockwise', 0};
+                
+            case 12 %Aperture
+                
+                fcnPrep = @aperturePrep;
+                fcnDraw = @apertureDraw;
+                
+                data = [50; 0; 100; 100; 320; 280];
+                
+                rowNames = {'Transp Surround', 'Transp Hole', 'Width', 'Height', 'Xpos', 'Ypos'};
+                
+                settings.box1   = {'Use Rect', 0};
+                
+            
+           case 13 %Dual Apertures
                 
                 %Created by Olof J�nsson
                 
@@ -224,115 +220,135 @@ switch Name
                 
                 settings.box1   = {'Use Rect for 1', 0};
                 settings.box2   = {'Use Rect for 2', 0};
+            
+            case 14 %Flicker rect
                 
-            case 15 %Starfield 1: Cylinder
+                fcnPrep = @flickerRectPrep;
+                fcnDraw = @flickerRectDraw;
                 
-                fcnPrep = @starfieldCylPrep; 
-                fcnDraw = @starfieldCylDraw;
-                
-                data = [1; 3000; 0; 0; 0; 0; 0; 20];
-                
-                rowNames = {'Dot size', 'Number of dots', 'Sideslip', ...
-                    'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll'};
-                
-            case 16 %Starfield 2
-                
-                fcnPrep = @starfieldPrep; %@starfieldCylPrep; 
-                fcnDraw = @starfieldDraw; %@starfieldCylDraw;
-                
-               data = [2; 1; 0; 0; 0; 0; 0; 0; 0; 0];
-                
-                rowNames = {'Dot size', 'Dot density', ...
-                    'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll', ...
-                    'Background Noise', 'Retain into next Trial'};
-
-                
-            case 17 %3d Target
-                
-                fcnPrep = @target3dPrep; 
-                fcnDraw = @target3dDraw; 
-                
-               data = [1; 0; 0; 50; 0; 0; 20; 10; 0];
-                
-                rowNames = {'Target Size', 'Target Start Azimuth', 'Target Start Elevation', 'Target Start Distance', ...
-                    'Target End Azimuth', 'Target End Elevation', 'Target End Distance', ...
-                    'Velocity', 'Target Noise'};
-                
-                settings.global = 0;
-                settings.pursuit = false;
-                
-            case 18 %Image Target
-                
-                fcnPrep = @imgTargetPrep;
-                fcnDraw = @imgTargetDraw;
-                
-                 settings.path1  = {'Image Path', 'Images/louie.jpg', '*.*'};
-                
-                 data = [ 0; 0; 20; 20; 60; 0; 1];
+                data = [ 100; 80; 320; 240; 2; 0; 255];
                 
                 rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
-                    'Velocity', 'Direction', 'Contrast'};
-                       
-            case 19 %Paloma Target Replication
+                    'FramesPerFlicker', 'Brightness 1', 'Brightness 2'};
+                
+                settings.box1  = {'Offset X function', 0};
+                settings.box2  = {'Offset Y function', 0};
+                settings.edit1 = {'X function: ', '100*sin(2*pi/3 *(n-1)*ifi)'};
+                settings.edit2 = {'Y function: ', '100*cos(2*pi/3 *(n-1)*ifi)'};
+    
+            case 15 %mouse target
+                
+                fcnPrep = @mouseTargetPrep;
+                fcnDraw = @mouseTargetDraw;
+                
+                data = [ 5; 100; 0];
+                
+                rowNames = {'Width', 'Height', 'Brightness'};
+                
+            case 16 %grid
+                
+                fcnPrep = @gridPrep;
+                fcnDraw = @gridDraw;
+                
+                data = [];
+                
+                rowNames = {};
+                
+            case 17 %Mat sequence
+                
+                fcnPrep = @matSequencePrep;
+                fcnDraw = @matSequenceDraw;
+                
+                data = [160; 320; 240];
+                
+                rowNames = {'Fps', 'Xpos', 'Ypos'};
+                
+                settings.global = 0;
+                settings.path1  = {'.Mat path: ', [cd '/Mat sequences/out.mat'], '*.mat'};
+                settings.box1   = {'Use fullscreen', 0};
+                
+            case 18 %Paloma Target Replication
                 
                 fcnPrep = @prTargetPrep;
                 fcnDraw = @prTargetDraw;
+                                
+                data = [720; 720; 1280; 1080; 0; 0; 0; 0; 900; 17];
+                rowNames = {'Window Width', 'Window Height', 'Window X', 'Window Y', ...
+                    'X Start', 'Y Start', 'X End', 'Y End', ...
+                    'Speed in pixels per s', ...
+                    'Motion Time'};
+                timing_data = [41; 20; 20; 20];                
+
+            case 19 %3D Target (General; random continuous trajectory)
                 
-                 
-                data = [ ];
-                %common_data(4) = 0.15;
-                rowNames = {};
-                       
-            case 20 %3d Target for Pursuit experiments
+                fcnPrep = @target3dGeneralPrep;
+                fcnDraw = @target3dGeneralDraw;
+                                
+                data = [2; 0; 0; 0; 0; 0; 0];
+                rowNames = {'Target Size', ...
+                    'X Start', 'Y Start', 'Z Start', 'X End', 'Y End', 'Z End'};
                 
-                fcnPrep = @target3dPrep; 
-                fcnDraw = @target3dDraw; 
-                
-                data = [1; 0; 0; 50; 0; 0; 20; 10; 0];
-                
-                rowNames = {'Target Size', 'Target Start Azimuth', 'Target Start Elevation', 'Target Start Distance', ...
-                    'Target End Azimuth', 'Target End Elevation', 'Target End Distance', ...
-                    'Velocity', 'Target Noise'};
-                
-                settings.global = 0;
-                settings.pursuit = true;
-            case 21 %Starfield 3
-                
-                fcnPrep = @starfield3Prep2; 
-                fcnDraw = @starfield3Draw; 
-                
-                data = [2; 1; 0; 0; 0; 0; 0; 0; 1];
-                
-                rowNames = {'Dot size', 'Dot density', ...
-                    'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll', 'Duration'}; 
+
+%             case 15 %Starfield 1: Cylinder
 %                 
-%                 data = [2; 1; 0; 0; 0; 0; 0; 0];
+%                 fcnPrep = @starfieldCylPrep; 
+%                 fcnDraw = @starfieldCylDraw;
 %                 
-%                 rowNames = {'Dot size', 'Dot density', ...
-%                     'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll'};
-                
-                %{
-            case 21 %2D Background based on Starfield (but moving in flat space)
-                
-                fcnPrep = @background2DPrep;    % generate image
-                fcnDraw = @imgTargetDraw;   % then render using ImgTarget
-                
-                settings.path1  = {'Image Path', 'Images/louie.jpg', '*.*'};
-                 
-                data = [2; 3; 60; 0; 0; 0; 320; 240];
-                %common_data(4) = 0.15;
-                rowNames = {'Min dot size', 'Dot density', 'Velocity', 'Direction', 'Height', 'Width', 'XPos', 'YPos'};
-              %}  
-                       
+%                 data = [1; 3000; 0; 0; 0; 0; 0; 20];
+%                 
+%                 rowNames = {'Dot size', 'Number of dots', 'Sideslip', ...
+%                     'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll'};
+
+%             case 20 %3d Target for Pursuit experiments
+%                 
+%                 fcnPrep = @target3dPrep; 
+%                 fcnDraw = @target3dDraw; 
+%                 
+%                 data = [1; 0; 0; 50; 0; 0; 20; 10; 0];
+%                 
+%                 rowNames = {'Target Size', 'Target Start Azimuth', 'Target Start Elevation', 'Target Start Distance', ...
+%                     'Target End Azimuth', 'Target End Elevation', 'Target End Distance', ...
+%                     'Velocity', 'Target Noise'};
+%                 
+%                 settings.global = 0;
+%                 settings.pursuit = true;
+
+%             case 12 %TextString
+%                 
+%                 fcnPrep = @textStringPrep;
+%                 fcnDraw = @textStringDraw;
+%                 
+%                 data = [50; 220; 240];
+%                 
+%                 rowNames = {'Size', 'Xpos', 'Ypos'};
+%                 
+%                 settings.edit1  = {'Text String', 'FlyFly'};
+
+%             case 8 %white noise
+%                 
+%                 fcnPrep = @whiteNoisePrep;
+%                 fcnDraw = @whiteNoiseDraw;
+%                 
+%                 data = [ 80; 100; 320; 240; 1; 1];
+%                 
+%                 rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
+%                     'Contrast', 'Pixels'};
+%                 
+%                 settings.box1  = {'Offset X function', 0};
+%                 settings.box2  = {'Offset Y function', 0};
+%                 settings.edit1 = {'X function: ', '100*sin(2*pi/3 *(n-1)*ifi)'};
+%                 settings.edit2 = {'Y function: ', '100*cos(2*pi/3 *(n-1)*ifi)'};
+
         end
         
         %set layer
+        
         layer = struct(...
             'name',       experiment_names{Name}, ...
             'fcnPrep',    fcnPrep, ...
             'fcnDraw',    fcnDraw, ...
             'parameters', {[rowNames, {'Time', 'PauseTime', 'PreStimTime', 'PostStimTime'}]}, ...
-            'data',       [data; common_data], ...
+            'data',       [data; timing_data], ...
             'settings',   settings, ...
             'impulse',    false);
 end

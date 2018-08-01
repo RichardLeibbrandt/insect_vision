@@ -22,7 +22,7 @@ function varargout = tableGui(varargin)
 
 % Edit the above text to modify the response to help tableGui
 
-% Last Modified by GUIDE v2.5 12-Apr-2018 13:05:48
+% Last Modified by GUIDE v2.5 22-Jun-2018 11:57:53
 
 %--------------------------------------------------------------------------
 % FlyFly v2
@@ -2188,3 +2188,38 @@ function applyWhiteNoiseBtn_Callback(hObject, eventdata, handles)
     setappdata(0, 'chstimuli', chstimuli);
 
     updateFigure(handles);
+
+
+% --- Executes on button press in generateXYbutton.
+% hObject    handle to generateXYbutton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+function generateXYbutton_Callback(hObject, eventdata, handles)
+	screendata = getappdata(0, 'screenData');
+    if screendata.ifi == 0
+        warndlg('Please initialize screen first.');
+    else
+        chstimuli = getappdata(0, 'chstimuli');
+        navData   = getappdata(0, 'navData');
+        index    = navData.activeStim;
+        z        = navData.marker(index);
+        data     = chstimuli(index).layers(z).data;
+        
+        NUM_TRIALS = size(data, 2);
+        SUBWIDTH = data(1, 1);
+        SUBHEIGHT = data(2, 1);       
+        MIDX = data(3, 1);
+        MIDY = data(4, 1);
+        SPEED = data(9, 1);
+        MOVE_DURATION = data(10,1)*screendata.ifi;
+        TARGET_SIZE = 15;
+        
+        [data(5, :), data(6, :), data(7, :), data(8, :)] = ...
+            generateXY(NUM_TRIALS, SPEED, MOVE_DURATION, SUBWIDTH, SUBHEIGHT, MIDX, MIDY, TARGET_SIZE);
+        
+        chstimuli(index).layers(z).data = data;
+        setappdata(0, 'chstimuli', chstimuli);
+        
+        updateFigure(handles);
+    end
+    

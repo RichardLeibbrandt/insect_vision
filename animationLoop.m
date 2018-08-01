@@ -98,17 +98,6 @@ for z = 1:numLayers
     data     = Stimulus.layers(z).data(1:end, TrialSubset);
     impulse  = Stimulus.layers(z).impulse;
 
-    if strcmpi(name, 'prTargetPrep')
-        fps = 1/ScreenData.ifi;
-        numRuns = 3000;
-        num_frames = round(0.25*fps);
-        pause_time = round(0.15*fps);
-        data = repmat(data, 1, numRuns);
-        data(end-3,:) = ones(1, size(data, 2)) * num_frames;
-        data(end,:) = ones(1, size(data, 2)) * pause_time;
-        Stimulus.layers(z).data = data; % HACK!! to save it back to file
-    end
-    
     T.time(z,:)     = data(end-3,:);
     T.pause(z,:)    = data(end-2,:);
     T.preStim(z,:)  = data(end-1,:);
@@ -123,13 +112,13 @@ for z = 1:numLayers
     
     critInput{z} = fcnPrep(data, ScreenData, settings, NumSubframes);
 
-    % General mechanism for storing general-purpose data related to
-    % the experiment that has been generated during preparation.
-    % Such data can be included in the "extraData" field returned by
-    % fcnPrep.
-    if isfield(critInput{z}, 'extraData')
-        Stimulus.layers(z).extraData = critInput{z}.extraData;
-    end
+%     % General mechanism for storing general-purpose data related to
+%     % the experiment that has been generated during preparation.
+%     % Such data can be included in the "extraData" field returned by
+%     % fcnPrep.
+%     if isfield(critInput{z}, 'extraData')
+%         Stimulus.layers(z).extraData = critInput{z}.extraData;
+%     end
 
     % save image data if using rolling image with auto generated image
     if strncmp(name, 'rollingImage', length('rollingImage'))

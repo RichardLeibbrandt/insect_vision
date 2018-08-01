@@ -1,29 +1,33 @@
-function [Xstart, Ystart, Xend, Yend] = generateXY(num_trials, speed, duration, width, height)
-    % TODO: as it is this is slightly biased against near-vertical or
-    % near-horizontal movements near the edges of the window.
-    % not worth fixing as we just need it for this limited purpose.
-    
-    % used for random permutations
-    hnt = round(num_trials/2);
-    p = [zeros(1, hnt) ones(1, num_trials-hnt)];
-    
+function [Xstart, Ystart, Xend, Yend] = generateXY(num_trials, speed, duration, width, height, midx, midy, rect_size)
     % distance to move per trial
     dist = floor(speed*duration);
     
-    % choose random position 1 within maxdist of the window edge (so we don't need
-    % to check bounds!)
-    X1 = dist + randi(width-2*dist, 1, num_trials);
-    Y1 = dist + randi(height-2*dist, 1, num_trials);
+    a=linspace(0,2*pi,num_trials+1);
+    a = a(1:end-1);
+    orderA = randperm(num_trials);
+    a = a(orderA);
     
-    % choose position 2's X to be within maxdist from position 1's X
-    X2 = X1 - dist + randi(2*dist, 1, num_trials);
-    % calculate position 2's Y from that (randomly choose to go above or below position 1)
-    flipY = 2*p(randperm(num_trials))-1;
-    Y2 = round(Y1 + flipY.*sqrt(dist^2-(X2-X1).^2));
+    a = 2*pi*rand(1, num_trials);
     
-    % randomly choose whether to go from pos 1 to pos 2, or vice versa
-    % (otherwise we'd be moving outwards more often than inwards)
-    flip12 = find(p(randperm(num_trials))==1);
-    Xstart = X1; Ystart = Y1; Xend = X2; Yend = Y2;
-    Xstart(flip12) = X2(flip12); Ystart(flip12) = Y2(flip12); Xend(flip12) = X1(flip12); Yend(flip12) = Y1(flip12);
+    Xdiff = dist*cos(a);
+    Ydiff = dist*sin(a);
+
+    Xmid = dist/2 + rect_size/2 + (width - dist - rect_size - 1)*rand(1,num_trials);
+    Ymid = dist/2 + rect_size/2 + (height - dist - rect_size - 1)*rand(1,num_trials);
+    
+    X1 = Xmid - Xdiff/2;
+    Y1 = Ymid - Ydiff/2;
+    X2 = Xmid + Xdiff/2;
+    Y2 = Ymid + Ydiff/2;
+    
+    Xadj = midx - width/2;
+    Yadj = midy - height/2;
+    
+    X1 = X1 + Xadj;
+    Y1 = Y1 + Yadj;
+    X2 = X2 + Xadj;
+    Y2 = Y2 + Yadj;
+    
+    Xstart = round(X1);     Xend = round(X2);
+    Ystart = round(Y1);     Yend = round(Y2);
 end
