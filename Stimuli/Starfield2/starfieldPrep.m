@@ -168,7 +168,7 @@ for k=1:numRuns     % for each trial
             xmin=-15.5;xmax=15.5;xspace=1;
             ymin=-12;ymax=-1;yspace=1;
             zmin=-20;zmax=-20;zspace=5;
-            sz=1;
+            sz=0.12;
            [x, y, z, sizes] = starSeedDebug(xmin, xmax, xspace, ymin, ymax, yspace, zmin, zmax, zspace, sz);
         end
         numDots = numel(x);
