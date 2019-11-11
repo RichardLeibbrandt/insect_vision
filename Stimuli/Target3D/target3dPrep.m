@@ -19,7 +19,11 @@ P.t           = Parameters(10,:)*NumSubframes;
 
 % z-clipping planes
 zFar = 200;
-zNear = 6;
+zNear = 1;
+
+% The following doesn't display anything, but just queries for the min and
+% max sized dots
+[minSmoothPointSize, maxSmoothPointSize, ~, ~] = Screen('DrawDots', ScreenData.wPtr);
 
 % Field of view (y)
 fovy = 2*atand(0.5*ScreenData.monitorHeight/ScreenData.flyDistance);
@@ -122,9 +126,11 @@ for k=1:numRuns     % for each trial
             output(k).target_xy{n} = scr_target;
             colour_block = 255*target_distance/zFar*ones(1, 3);
             output(k).target_color{n} = colour_block;
+            
             % convert sizes from cm to pixels for PTB DrawDots()
 %            output(k).target_dotsize{n} = max( pxPerCm*P.targetSize(k)*ScreenData.flyDistance/target_distance,1);
-            output(k).target_dotsize{n} = max( pxPerCm*P.targetSize(k)*ScreenData.flyDistance/-target_pos(3),1);
+            output(k).target_dotsize{n} = ...
+                min(max( pxPerCm*P.targetSize(k)*ScreenData.flyDistance/target_distance, minSmoothPointSize), maxSmoothPointSize);
         end;
     end
     % poss

@@ -1,4 +1,4 @@
-function [x, y, z, sizes] = starSeed2(density, size, box_x, box_y, box_z, maxDistance)
+function [x, y, z, sizes, clrs] = starSeed2(density, size, box_x, box_y, box_z, maxDistance)
 %function [x y z] = starSeed(ThisCase, NDots, ViewDist)
 %
 % Returns randomly generated position vector [x y z].
@@ -33,7 +33,7 @@ z(removables) = [];
 
 
 sizes = ones(1, length(x)) * size;
-
+clrs = rand(1, length(x));
 end
 
 

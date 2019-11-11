@@ -145,7 +145,7 @@ crash_alert = false;
 numshown = zeros(1,numRuns);
 
 if ~DEBUG_SPACE
-        [x, y, z, sizes] = starSeed2(P.density(1), P.dotSize(1), box_x, box_y, box_z, zFar);
+        [x, y, z, sizes, clrs] = starSeed2(P.density(1), P.dotSize(1), box_x, box_y, box_z, zFar);
 else
         % DEBUGGING - CREATE A SPACE WITH A FIXED GRID OF DOTS, INSTEAD OF
         % RANDOM STARFIELD
@@ -232,7 +232,8 @@ for k=1:numRuns     % for each trial
         fy = y(indices);
         fz = z(indices);
         fs = sizes(indices);
-        
+        fc = clrs(indices);
+
         culled(n) = numel(x)-numel(fx);
         
         % CALCULATE ALL DISTANCES FROM THE ORIGIN
@@ -246,6 +247,7 @@ for k=1:numRuns     % for each trial
         fy = fy(indices);
         fz = fz(indices);
         fs = fs(indices);
+        fc = fc(indices);
         distances = distances(indices);       
         b = numel(fx);
         clipped(n) = a-b;
@@ -258,6 +260,7 @@ for k=1:numRuns     % for each trial
         fy = fy(sort_idx);
         fz = fz(sort_idx);
         fs = fs(sort_idx);
+        fc = fc(sort_idx);
         distances = distances(sort_idx);
         
         numshown(n) = numel(fx);
@@ -280,7 +283,7 @@ for k=1:numRuns     % for each trial
         % convert sizes from cm to pixels for PTB DrawDots()
         output(k).dotsize{n} = max( pxPerCm*fs.*distanceRatios,1);
         % Colour = greyscale
-        output(k).color{n} = repmat(255*distances/zFar, 3, 1);
+        output(k).color{n} = repmat(255*fc, 3, 1);
     end
     
     output(k).center = [];

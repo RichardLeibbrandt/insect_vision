@@ -161,7 +161,7 @@ numshown = zeros(1,numRuns);
 for k=1:numRuns     % for each trial
     if (k==1) || ~P.retain(k-1)
         if ~DEBUG_SPACE
-            [x, y, z, sizes] = starSeed2(P.density(k), P.dotSize(k), box_x, box_y, box_z, zFar);
+            [x, y, z, sizes, clrs] = starSeed2(P.density(k), P.dotSize(k), box_x, box_y, box_z, zFar);
         else
             % DEBUGGING - CREATE A SPACE WITH A FIXED GRID OF DOTS, INSTEAD OF
             % RANDOM STARFIELD
@@ -270,6 +270,7 @@ for k=1:numRuns     % for each trial
         fy = y(indices);
         fz = z(indices);
         fs = sizes(indices);
+        fc = clrs(indices);
         
         culled(n) = numel(x)-numel(fx);
         
@@ -284,6 +285,7 @@ for k=1:numRuns     % for each trial
         fy = fy(indices);
         fz = fz(indices);
         fs = fs(indices);
+        fc = fc(indices);
         distances = distances(indices);       
         b = numel(fx);
         clipped(n) = a-b;
@@ -296,6 +298,7 @@ for k=1:numRuns     % for each trial
         fy = fy(sort_idx);
         fz = fz(sort_idx);
         fs = fs(sort_idx);
+        fc = fc(sort_idx);
         distances = distances(sort_idx);
         
         numshown(n) = numel(fx);
@@ -317,13 +320,15 @@ for k=1:numRuns     % for each trial
         % distanceRatios connects virtual-world sizes (in cm) with
         % real-world centimetres: the ratio is 1 when the object is located
         % exactly in the plane of the screen.
-        %distanceRatios = ScreenData.flyDistance./distances;
+%         distanceRatios = ScreenData.flyDistance./distances;
         distanceRatios = ScreenData.flyDistance./-fz;
         % convert sizes from cm to pixels for PTB DrawDots()
         output(k).dotsize{n} = max( pxPerCm*fs.*distanceRatios,1);
+%         output(k).dotsize{n} = ones(size(distanceRatios));
         %output(k).dotsize{n} = max(min(63, pxPerCm*ScreenData.flyDistance*fs./distances),1);
         % Colour = greyscale
-        output(k).color{n} = repmat(255*distances/zFar, 3, 1);
+        output(k).color{n} = repmat(255*fc, 3, 1);
+%         output(k).color{n} = repmat(255*distances/zFar, 3, 1);
     end
    % origin_pos = origin_pos + [cumulative_rl cumulative_ud cumulative_fb];
     
