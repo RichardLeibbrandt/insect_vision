@@ -34,6 +34,11 @@ fcnDraw = cell(numLayers,1);
 
 %Screen data
 %--------------------------------------------------------------------------
+% FIRST CHANGE THE BACKGROUND COLOR in ScreenData!!
+% ScreenData.beforeBgColor = ScreenData.bgColor;
+% ScreenData.bgColor = ScreenData.targetBgColor;
+% ScreenData = rmfield(ScreenData, 'targetBgColor');
+
 S.triggerPos  = ScreenData.triggerPos;
 S.monitorHz   = ScreenData.hz;
 S.wPtr        = ScreenData.wPtr;
@@ -42,9 +47,11 @@ S.flyPos      = ScreenData.flyPos;
 S.rect        = ScreenData.rect;
 S.dlp         = ScreenData.dlp;
 S.monitorHeight= ScreenData.monitorHeight;
-
+S.bgColor       = ScreenData.bgColor;
 S.triggerRGBon  = ScreenData.triggerRGBon;
 S.triggerRGBoff = ScreenData.triggerRGBoff;
+
+
 
 fprintf('Calculating (might take some time if you have a starfield with many dots)... ');
 for z = 1:numLayers
@@ -236,7 +243,8 @@ for z = 1:numLayers
     [~] = fcnDraw{z}(S.wPtr, 1, 1, 0, critInput{z});
 end
 
-Screen('FillRect', S.wPtr, 255); %fill with white
+
+Screen('FillRect', S.wPtr, S.bgColor); %fill with white
 Screen('FillRect', S.wPtr, S.triggerRGBoff, S.triggerPos); %trigger off
 
 % CRITICAL SECTION
@@ -326,7 +334,7 @@ totalStimTime = toc(critSecStart);
 timeFinish    = datestr(now, 0);
 
 %Turn trigger off (end experiment)
-Screen('FillRect', S.wPtr, 255);
+Screen('FillRect', S.wPtr, S.bgColor);
 Screen('FillRect', S.wPtr, S.triggerRGBoff, S.triggerPos); %trigger off
 Screen('DrawingFinished',S.wPtr);
 Screen('Flip', S.wPtr, vbl+(0.7)*S.ifi);

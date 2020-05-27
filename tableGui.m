@@ -22,7 +22,7 @@ function varargout = tableGui(varargin)
 
 % Edit the above text to modify the response to help tableGui
 
-% Last Modified by GUIDE v2.5 22-Jun-2018 11:57:53
+% Last Modified by GUIDE v2.5 27-May-2020 17:02:19
 
 %--------------------------------------------------------------------------
 % FlyFly v2
@@ -167,6 +167,7 @@ end
 %Screen is now in use, update navData and figure
 screenData.inUse = 1;
 
+
 setappdata(0, 'screenData', screenData);
 updateFigure(handles);
 
@@ -191,6 +192,9 @@ end
 % --RUN STIMULUS HERE--
 
 screenData = getappdata(0, 'screenData');
+screenData.beforeBgColor = screenData.bgColor;
+screenData.bgColor = screenData.targetBgColor;
+
 missed = animationLoop(chstimuli(index), screenData, navData, trialSubset);
 
 %
@@ -199,6 +203,7 @@ missed = animationLoop(chstimuli(index), screenData, navData, trialSubset);
 navData.skippedLatest = missed;
 navData.skippedFrames = navData.skippedFrames + missed;
 
+% screenData.beforeBgColor = screenData.bgColor;
 screenData.inUse   = 0;
 
 setappdata(0, 'screenData', screenData);
@@ -217,8 +222,13 @@ function initScreen_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+screenData = getappdata(0, 'screenData');
+screenData.bgColor = screenData.targetBgColor;
+setappdata(0, 'screenData', screenData);
+
 screenFcn('Init');
 updateFigure(handles);
+
 
 
 % --- Executes on button press in killScreen.
@@ -2223,3 +2233,49 @@ function generateXYbutton_Callback(hObject, eventdata, handles)
         updateFigure(handles);
     end
     
+
+
+
+function editBgColor_Callback(hObject, eventdata, handles)
+% hObject    handle to editBgColor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of editBgColor as text
+%        str2double(get(hObject,'String')) returns contents of editBgColor as a double
+disp('Edit: this is the callback');
+tbgc = str2num(get(hObject, 'String'));
+screenData = getappdata(0, 'screenData');
+% screenData.beforeBgColor = screenData.bgColor;
+screenData.targetBgColor = tbgc;
+setappdata(0, 'screenData', screenData);
+
+% --- Executes during object creation, after setting all properties.
+function editBgColor_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to editBgColor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+screenData = getappdata(0, 'screenData');
+set(hObject, 'String', num2str(screenData.bgColor));
+screenData.targetBgColor = screenData.bgColor;
+setappdata(0, 'screenData', screenData);
+
+% --- Executes on button press in applyBgColour.
+function applyBgColour_Callback(hObject, eventdata, handles)
+% hObject    handle to applyBgColour (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+screenData = getappdata(0, 'screenData');
+screenData.bgColor = screenData.targetBgColor;
+
+Screen('FillRect', screenData.wPtr, screenData.bgColor);
+Screen('Flip', screenData.wPtr);
+
+setappdata(0, 'screenData', screenData);

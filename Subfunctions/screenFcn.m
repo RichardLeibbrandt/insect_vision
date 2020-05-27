@@ -43,11 +43,11 @@ switch Action
 
             %use screenPartial for a non full screen
             if screenData.usePartial
-                [wPtr,rect] = Screen('OpenWindow', screenNumber, rgbWhite, screenPartial, ...
+                [wPtr,rect] = Screen('OpenWindow', screenNumber, screenData.bgColor, screenPartial, ...
                     [], [], [], [], kPsychNeedFastOffscreenWindows);
 %                 [wPtr,rect] = PsychImaging('OpenWindow', screenNumber, rgbWhite, screenPartial);
             else
-                [wPtr,rect] = Screen('OpenWindow', screenNumber, rgbWhite, ...
+                [wPtr,rect] = Screen('OpenWindow', screenNumber, screenData.bgColor, ...
                     [], [], [], [], [], kPsychNeedFastOffscreenWindows);%fullscreen
 %                 [wPtr,rect] = PsychImaging('OpenWindow', screenNumber, rgbWhite); %fullscreen
             end

@@ -55,7 +55,6 @@ switch Option
         init = navData; %return new values
         
     case 'InitScreenData'
-        
         %screen data
         screenData.isInit       = 0;         %is the screen initialized?
         screenData.inUse        = 0;         %is the screen in use atm?        
@@ -76,7 +75,8 @@ switch Option
         screenData.partial        = [0 0 640 480];   %size of partial screen
         screenData.triggerRGBon   = 255;             %color of trigger active (white)
         screenData.triggerRGBoff  = 0;               %color of trigger deactive (black)
-        
+        screenData.bgColor        = 255;   
+%         screenData.beforeBgColor = screenData.bgColor;
         screenData.triggerPos     = [0 430 50 480];    %size of trigger, width, height
         screenData.flyPos         = [320 240 320 240]; %fly position in from of monitor
         

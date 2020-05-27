@@ -22,7 +22,7 @@ function varargout = mainSettings(varargin)
 
 % Edit the above text to modify the response to help mainSettings
 
-% Last Modified by GUIDE v2.5 30-Jan-2012 15:29:04
+% Last Modified by GUIDE v2.5 17-Mar-2020 09:23:16
 
 %--------------------------------------------------------------------------
 % FlyFly v2
@@ -177,6 +177,7 @@ gamma         = str2double(get(handles.gamma,           'String'));
 widthPartial  = str2double(get(handles.widthPartial,    'String'));
 heightPartial = str2double(get(handles.heightPartial,   'String'));
 
+%bgColor = str2double(get(handles.bgColorTextbox,   'String'));
 %OLOF ADDED
 x1 =str2double(get(handles.x1,             'String'));
 y1 =str2double(get(handles.y1,             'String'));
@@ -202,7 +203,7 @@ if strcmp(choice, 'Yes')
     screenData.dlp           = get(handles.chkDlpmode,  'Value');
     screenData.flyDistance   = str2double(get(handles.flyDistance,  'String'));
     screenData.monitorHeight  = str2double(get(handles.monitorHeight,  'String'));
-    
+    %screenData.bgColor      = bgColor;
     %OLOF ADDED
     screenData.flyPos = [x1 y1 x2 y2];
     
@@ -668,3 +669,26 @@ function figure1_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
+
+
+
+function bgColorTextbox_Callback(hObject, eventdata, handles)
+% hObject    handle to bgColorTextbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of bgColorTextbox as text
+%        str2double(get(hObject,'String')) returns contents of bgColorTextbox as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function bgColorTextbox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to bgColorTextbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

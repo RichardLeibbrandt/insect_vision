@@ -37,7 +37,9 @@ experiment_names = {...
     '---- OTHER STIMULI ----', ...                                  % 10 (dummy)
     'Sine Grating RF', 'Aperture', 'Dual Apertures', ...            % 11, 12, 13
     'Flicker Rect', 'Mouse Target', 'Grid', ...                     % 14, 15, 16
-    '.Mat Sequence', 'Paloma Target Replication'};                  % 17, 18
+    '.Mat Sequence', 'Paloma Target Replication', ...               % 17, 18
+    'Loom', 'Image Target Flicker', 'Target3D XYZ', 'RectTarget Relative', ...
+    'Starfield Flicker'};                                                        % 19
         
 % common_data = the default timing data
 common_data = [60; 0; 0; 0];
@@ -67,7 +69,7 @@ switch Name
                 fcnPrep = @imgTargetPrep;
                 fcnDraw = @imgTargetDraw;
                 
-                 settings.path1  = {'Image Path', 'Images/louie.jpg', '*.*'};
+                 settings.path1  = {'Image Path', 'Images/circle_black.png', '*.*'};
                 
                  data = [ 0; 0; 20; 20; 60; 0; 1];
                 
@@ -279,14 +281,67 @@ switch Name
                     'Motion Time'};
                 timing_data = [41; 20; 20; 20];                
 
-            case 19 %3D Target (General; random continuous trajectory)
+            case 19 %Loom
+                fcnPrep = @loomPrep;
+                fcnDraw = @loomDraw;
                 
-                fcnPrep = @target3dGeneralPrep;
-                fcnDraw = @target3dGeneralDraw;
-                                
-                data = [2; 0; 0; 0; 0; 0; 0];
-                rowNames = {'Target Size', ...
-                    'X Start', 'Y Start', 'Z Start', 'X End', 'Y End', 'Z End'};
+                settings.path1  = {'Image Path', 'Images/circle_black.png', '*.*'};
+                         
+                data = [10; 10; 200; 200; 100; 0; 1; -1; 0];
+                rowNames = {'L_HalfDiameter_m', 'V_Velocity_m_per_s', ...
+                    'XPos', 'YPos', 'StopSize_pixels', 'LoomTime', ...
+                    'Contrast1', 'Contrast2', 'FlickerFramesPerCycle'};   
+                
+            case 20 %Image Target Flicker
+                
+                fcnPrep = @imgTargetFlickerPrep;
+                fcnDraw = @imgTargetFlickerDraw;
+                
+                 settings.path1  = {'Image Path', 'Images/circle_black.png', '*.*'};
+                
+                 data = [ 0; 0; 20; 20; 60; 0; 1; -1; 0];
+                
+                rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
+                    'Velocity', 'Direction', 'Contrast1', 'Contrast2', 'FlickerFramesPerCycle'};  
+                
+                
+            case 21 %Target 3d XYZ
+                
+                fcnPrep = @target3dXYZPrep;
+                fcnDraw = @target3dXYZDraw;
+                
+                data = [ 0.8; 0; 0; 0];
+                
+                rowNames = {'Size', 'X', 'Y', 'Z'};
+                
+            case 22 %Relative Rect Target
+                
+                fcnPrep = @Relative_rectTargetPrep;
+                fcnDraw = @Relative_rectTargetDraw;
+                
+                data = [ 5; 5; 100; 100; 60; 0; 0; 0; 0];
+                
+                rowNames = {'Height', 'Width', 'Xpos', 'Ypos',...
+                    'Velocity', 'Direction', 'Brightness','XposOffset','YposOffset'};
+               
+            case 23 %Starfield Flicker
+                
+                fcnPrep = @starfieldFlickerPrep; %@starfieldCylPrep; 
+                fcnDraw = @starfieldFlickerDraw; %@starfieldCylDraw;
+                
+               data = [2; 1; 0; 0; 0; 0; 0; 0; 0; 0; 1; -1; 0];
+                
+                rowNames = {'Dot size', 'Dot density', ...
+                    'Sideslip',  'Lift', 'Thrust', 'Pitch', 'Yaw', 'Roll', ...
+                    'Background Noise', 'RetainIntoNextTrial', ...
+                    'Contrast1', 'Contrast2', 'FlickerFramesPerCycle'};
+%             case 20:
+%                 fcnPrep = @target3dGeneralPrep;
+%                 fcnDraw = @target3dGeneralDraw;
+%                                 
+%                 data = [2; 0; 0; 0; 0; 0; 0];
+%                 rowNames = {'Target Size', ...
+%                     'X Start', 'Y Start', 'Z Start', 'X End', 'Y End', 'Z End'};
                 
 
 %             case 15 %Starfield 1: Cylinder

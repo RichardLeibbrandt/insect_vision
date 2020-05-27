@@ -94,7 +94,7 @@ for z = 1:numLayers
     
     % save image data if using rolling image with auto generated image
     name = func2str(Stimulus.layers(z).fcnPrep);
-    name = name(1:12);
+    name = name(1:min(12, length(name)));
     if strcmp(name,'rollingImage');
         Stimulus.layers(z).images = critInput{z}.images;
         critInput{z} = rmfield(critInput{z},'images');
